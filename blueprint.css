@@ -151,6 +151,7 @@ body>#blueprint-outliner .headline .top-bottons .button[name="window"],
 	color: #adb9bd;
 	background: #1c1c1e;
 	border-bottom: 1px solid #343434;
+	overflow: hidden;
 }
 /*headline for bottom panel*/
 #blueprint-bottomPanel #blueprint-outliner .headline {
@@ -167,7 +168,7 @@ body>#blueprint-outliner .headline .top-bottons .button[name="window"],
 	padding: 3px 3px 0px 3px;
 }
 #blueprint-outliner .headline .active {
-	background: #343434;
+	background: #535353;
 	border: #000;
 }
 #blueprint-outliner .headline .minimap {

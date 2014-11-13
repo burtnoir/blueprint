@@ -64,7 +64,73 @@ define(function (require, exports, modul) {
 			return curr;
 		};
 		//@todo implement callbackForSelectorList | generate a list with selectors
-		var callbackForSelectorList = function(token, lineNumber, style) {}
+		var callbackForSelectorList = function(token, lineNumber, style) {
+			switch(style) {
+				case 'tag bracket':
+					lastBracket = token;
+					if (token.search('>') !== -1) {
+						//close tag
+						var attribStr = '',
+							nameStr = '';
+
+						if (inOpenTag) {
+							inOpenTag = false;
+							if (!currElement) { break; }
+							if ('id' in currElement.attr) {
+								attribStr += ' <span class="id">#' + currElement.attr.id + '</span>';
+								nameStr += ' #' + currElement.attr.id;
+							}
+							if ('class' in currElement.attr) {
+								attribStr += ' <span class="class">.' + currElement.attr.class + '</span>';
+								nameStr += ' .' + currElement.attr.class;
+							}
+							currElement.line = '<span class="tag">' + currElement.name + '</span>' + attribStr;
+							var tagName = currElement.name;
+							currElement.name = currElement.name + nameStr;
+
+							if(isVoidElement(tagName)) {
+								parentList.pop();
+								currElement = parentList[parentList.length-1];
+							}
+						}
+						isAttr = false;
+					} else if (token.search('<') !== -1) {
+						openTagCharPos = charNumber -(token.length);
+					}
+					break;
+				case 'tag':
+					if (lastBracket === '<') {
+						//open tag
+						inOpenTag = true;
+						var element = {
+							name : token,
+							line : '',
+							startline : lineNumber,
+							startchar : openTagCharPos,
+							childs : [],
+							attr : [],
+						}
+						currElement.childs.push(element);
+						parentList.push(element);
+						currElement = element;
+					} else if (lastBracket === '</') {
+						//close tag
+						parentList.pop();
+						currElement = parentList[parentList.length-1];
+					}
+					break;
+				case 'attribute':
+					isAttr = token;
+					break;
+				case 'string':
+					if (isAttr !== false) {
+						//add attribute
+						currElement.attr[isAttr] = token.replace(/["']/g, '');
+						isAttr = false;
+					}
+					break;
+			}
+		}
 		var callback = function(token, lineNumber, style) {
 			switch(style) {
 				case 'tag bracket':
