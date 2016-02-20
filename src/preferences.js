@@ -1,26 +1,3 @@
-/*
- * The MIT License (MIT)
- *
- * Copyright (c) 2014 Stefan Schulz
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
-*/
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4 */
 /*global define, $, localStorage, brackets */
 define(function (require, exports) {
@@ -31,8 +8,9 @@ define(function (require, exports) {
 		uiOpenState = false,
 		uiDialog,
 		defaultPrefValues = {
-			generelopenOnStart : true,
+			generelopenOnStart : 'right',
 			generelautoChangeTab : 'outline',
+			generellastTab : 'outline',
 			outlinedefaultSorting : 'none',
 			outlineunknownTypeChangeTab : true,
 			outlinefontSize : '19',
@@ -47,8 +25,8 @@ define(function (require, exports) {
 					openOnStart : {
 						type : 'select',
 						description : 'show on start up',
-						values : [false, 'right', 'bottom', 'window'],
-						value : true,
+						values : ['false', 'right', 'bottom', 'window'],
+						value : 'right',
 					},
 					autoChangeTab : {
 						type : 'select',
@@ -117,16 +95,11 @@ define(function (require, exports) {
 
 	exports.init = function () {
 		$ui = $('<ul class="perf-list"></ul>');
-		//@todo remove sometime
-//		localStorage.removeItem("blueprintPrefs");
+		//@todo remove sometime 0.7
 		localStorage.removeItem("blueprintPreferences");
 
 		loadPrefs();
-		//
-		if (PREFS.generelopenOnStart === true) {
-			PREFS.generelopenOnStart = 'right';
-		}
-		//check first init
+		// Check first init before using the preferences object.
 		if (PREFS === null) {
 			PREFS = defaultPrefValues;
 			savePrefs();
@@ -134,7 +107,13 @@ define(function (require, exports) {
 			PREFS = $.extend({}, defaultPrefValues, PREFS);
 			savePrefs();
 		}
+		//@todo remove sometime 0.8
+		if (PREFS.generelopenOnStart === true) {
+			PREFS.generelopenOnStart = 'right';
+			savePrefs();
+		}
 	};
+
 	/*
 	 *	@param {string} url relative 2 PREFS
 	 */
@@ -142,38 +121,10 @@ define(function (require, exports) {
 		var key = url.replace(/\//g, '');
 
 		if (key in PREFS) {
-			//validate value with
 			return PREFS[key];
 		} else {
-			console.error('key dosen\'t exists!');
+			console.error("key doesn't exist!");
 		}
-//		var parts = url.split('/'),
-//			index = 0,
-//			result = PREFS;
-//
-//		for (; index<parts.length; index++) {
-//			if (!('type' in result)) {
-//				if (parts[index] in result) {
-//					result = result[ parts[index] ];
-//				} else {
-//					//console.log('key not exists1: ' + url);
-//					return false;
-//				}
-//			} else if (result.type === 'category') {
-//
-//				if (parts[index] in result.childs) {
-//					result = result.childs[ parts[index] ];
-//				} else {
-//					//console.log('key not exists2: ' + parts[index], result.childs);
-//					return false;
-//				}
-//			}
-//		}
-//		if (result.type === 'category' || result.type === 'root') {
-//			//console.log('key not exists3: ' + url, result);
-//			return false;
-//		}
-//		return result.value;
 	};
 	/*
 	 *	@param {string} url relative 2 PREFS
@@ -191,24 +142,8 @@ define(function (require, exports) {
 				changeCallBacks[i].call(null, url, value);
 			}
 		} else {
-			console.error('key dosen\'t exists!');
+			console.error("key doesn't exist!");
 		}
-//		var parts = url.split('/'),
-//			i = 0,
-//			chain = PREFS;
-//		for (; i<parts.length; i++) {
-//			if (!('type' in chain)) {
-//				chain = chain[ parts[i] ];
-//			} else if (chain.type === 'category') {
-//				chain = chain.childs[ parts[i] ];
-//			}
-//		}
-//		chain.value = value;
-//
-//		for(i=0;i<changeCallBacks.length;i++) {
-//			changeCallBacks[i].call(null, url, value);
-//		}
-//		savePrefs();
 	};
 	exports.openUI = function () {
 		if (uiOpenState === true) { return; }
@@ -284,7 +219,6 @@ define(function (require, exports) {
 		}
 
 		//create dialog
-		//		Dialogs.showModalDialogUsingTemplate($ui);
 		uiDialog = Dialogs.showModalDialog('blueprint-prefs-dialog',
 							   	'Preferences',
 							   	$('<div></div>').append($ui).html(),

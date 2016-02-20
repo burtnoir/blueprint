@@ -1,56 +1,10 @@
-/*
-outliner
--html:
-	-umschalten zwischen id's, tags, classes, attr
-	-context menu / (zoom oder ausschnit anzeigen)
--css querys
--colapse/open all
-//-filter /prototypes,anonym,
---prefs:
--colors
-
-
-minimap
--aware inline editor/view (codeMirror->events)
-
-next version features
-alle extensions können ein fenster mit ihrer id öffnen
-darin sieht man dann welche neuen features schon implementiert sind
-und ein voting für neue features.
-und man kann ideen an den server senden
-der extension autor segnet die ab oder nich und wenn ja stehen sie bei dem voting
--changelog/rating/counts:running, installed(realy)/downloads/comments/buggreporting/issues
-
-
- * The MIT License (MIT)
- *
- * Copyright (c) 2014 Stefan Schulz
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
-*/
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4 */
 /*global define, document, $, brackets, setTimeout, localStorage, setInterval, window, CSSRule */
 define(function (require, exports, module) {
     "use strict";
 
-	//first of all init preferences 2 ensure that at load all perfs are exists
-	var prefs = require('./preferences');
+	//first of all init preferences to ensure that at load, all perfs exists
+	var prefs = require('./src/preferences');
 	prefs.init();
 
     var AppInit         = brackets.getModule("utils/AppInit"),
@@ -59,9 +13,10 @@ define(function (require, exports, module) {
 		modulePath		= ExtensionUtils.getModulePath(module),
 		Resizer			= brackets.getModule('utils/Resizer'),
 		DocumentManager = brackets.getModule('document/DocumentManager'),
+		MainViewManager	= brackets.getModule('view/MainViewManager'),
 		WorkspaceManager= brackets.getModule("view/WorkspaceManager"),
-		Outliner		= require('./outliner'),
-		Minimap			= require('./minimap'),
+		Outliner		= require('./src/outliner'),
+		Minimap			= require('./src/minimap'),
 		outlinerActive	= false,
 		outlinerOpen	= false,
 		parsed			= false,
@@ -81,21 +36,6 @@ define(function (require, exports, module) {
 		_win,
 		currentView;
 
-	function changeTab(tabName) {
-		if (tabName === 'outline') {
-			$minimapRoot.hide();
-			$outlineRoot.show();
-			Outliner.setViewState(true);
-			Minimap.setViewState(false);
-			activeTab = tabName;
-		} else if (tabName === 'minimap') {
-			$outlineRoot.hide();
-			Outliner.setViewState(false);
-			Minimap.setViewState(true);
-			$minimapRoot.show();
-			activeTab = tabName;
-		}
-	}
 	function setActive(flag) {
 		if (flag) {
 			outlinerActive = true;
@@ -169,7 +109,7 @@ define(function (require, exports, module) {
         if (_win && _win.closed) { _win = null; }
         if (!_win) {
 			var path = 'file:///' + modulePath + 'window.html';
-            _win = window.open(path);//'about:blank');
+            _win = window.open(path);
 			_win.onload = function() {
 				copyCssToWindow();
 				cb(_win);
@@ -195,28 +135,20 @@ define(function (require, exports, module) {
 		_win.document.head.appendChild(document.createElement("style"));
 
 		var targetCss = windowCss[windowCss.length - 1];
-		var rule_index = 0; // We'll need this to help us add the rules in order.
+		var rule_index = 0;
 		for (var i=0; i<mainCss.length; i++) {
-				//filter by files
 				if (typeof mainCss[i].href === 'string' &&
 					(mainCss[i].href.slice(-14) !== 'codemirror.css' ||
 				    mainCss[i].href.slice(-20) !== themePath.slice(-20)) ) {
 					continue;
 				}
 			for (var j=0; j<mainCss[i].cssRules.length; j++) {
-				// Loop through the rules in each of the parent document's stylesheets.
 				var r = mainCss[i].cssRules[j];
 				if (r.type == CSSRule.IMPORT_RULE) {
-					// If the current rule is an @import, copy the rules from the stylesheet it imports.
 					for (var k=0; k<r.styleSheet.cssRules.length; k++) {
-						/* FIXME: Assuming a max depth of 1 import for now.
-						This should really be done recursively, but it's a PoC, so hey.
-						*/
-						// Insert the rule from the parent doc's stylesheet into ours.
 						targetCss.insertRule(r.styleSheet.cssRules[k].cssText, rule_index++);
 					}
 				} else {
-					// Insert the rule from the parent doc's stylesheet into ours.
 					targetCss.insertRule(r.cssText, rule_index++);
 				}
 			}
@@ -225,21 +157,12 @@ define(function (require, exports, module) {
 	function parseDoc() {
 		if (outlinerActive) {
 			if (!Outliner.update(currDoc) && prefs.get('outline/unknownTypeChangeTab')) {
-				changeTab('minimap');
+				exports.changeTab('minimap');
 			}
 			Minimap.update(currDoc);
 			parsed = true;
 		} else {
 			parsed = false;
-		}
-		if (!currDoc) {
-			if (currentView !== 'window') {
-				closeView();
-			}
-		} else if (!lastDoc) {
-			if (currentView !== 'window') {
-				openView();
-			}
 		}
 	}
 	function initHtml() {
@@ -256,8 +179,7 @@ define(function (require, exports, module) {
 			}
 		});
 
-		//create html   mySidePanelRight
-		$('head').append('<link rel="stylesheet" type="text/css" href="' + modulePath + 'blueprint.css">');
+		$('head').append('<link rel="stylesheet" type="text/css" href="' + modulePath + 'src/blueprint.css">');
 		$panelRight = $('<div id="side-panel-right"></div>'); //right sidebar
 			$wrapper = $('<div id="blueprint-outliner"></div>');
 				$headline = $('<div class="headline">' +
@@ -284,10 +206,7 @@ define(function (require, exports, module) {
 
 		$content.append($outlineRoot);
 		$content.append($minimapRoot);
-
-		//DropdownButton();
-
-
+		
 		$('.button.prefs', $footer).click(function () {
 			if (prefs.isUiOpen()) {
 				prefs.closeUI();
@@ -314,13 +233,18 @@ define(function (require, exports, module) {
 
 		Resizer.makeResizable($panelRight[0], Resizer.DIRECTION_HORIZONTAL, 'left', 100, true);
 
-
 		//resize events
+		$('#sidebar').on('panelResizeUpdate', function(e) {
+			if (outlinerOpen && currentView === 'right') {
+				$('.main-view .content').css('right', 'calc(' + $panelRight.width() + 'px + 30px)');
+			}
+		});
 		var allroundHandler = function (e, width) {
 			$('.main-view .content').css('right', 'calc(' + width + 'px + 30px)');
 		};
 		$panelRight.on('panelResizeUpdate', allroundHandler);
-		$panelRight.on('panelCollapsed', function () {
+		$panelRight.on('panelCollapsed', function (e) {
+			outlinerOpen = false;
 			$('.main-view .content').css('right', '30px');
 		});
 		$panelRight.on('panelExpanded', function (e, w) {
@@ -331,12 +255,31 @@ define(function (require, exports, module) {
 		});
 
 	}
-	function changeDocument(doc) {
-		lastDoc = currDoc;
-		currDoc = doc;
-		parsed = false;
-		changeTab(prefs.get('generel/autoChangeTab'));
-		parseDoc();
+
+	function changeDocument(file) {
+		if (!file) {
+			lastDoc = currDoc;
+			currDoc = null;
+			if (currentView !== 'window') {
+				closeView();
+			}
+			return;
+		} else {
+			if (currentView !== 'window') {
+				openView();
+			}
+		}
+		DocumentManager.getDocumentForPath(file._path).done(function(doc) {
+			lastDoc = currDoc;
+			currDoc = doc;
+			parsed = false;
+			var tabName = prefs.get('generel/autoChangeTab');
+			if (tabName === 'keep') {
+				tabName = prefs.get('generel/lastTab');
+			}
+			exports.changeTab(tabName);
+			parseDoc();
+		});
 	}
 
 	//extention rating ping
@@ -400,42 +343,48 @@ define(function (require, exports, module) {
 
 		Outliner.init($outlineRoot);
 		Minimap.init($minimapRoot);
-
 		var openState = prefs.get('generel/openOnStart');
-		if (openState !== false) {
+		if (openState !== 'false') {
 			setActive(true);
 			switchView(openState);
 		} else {
 			switchView('right');
 		}
 
-		window.addEventListener("focus", function() {
-			if (_win) {
-//				setTimeout(function(){
-//					window.blur();
-//					console.log('focus', _win.focus());
-//					_win.focus();
-//				}, 1000);
-			}
-		}, false);
 		$('.tab', $headline).click(function () {
 			if ($(this).hasClass('outline')) {
-				changeTab('outline');
+				exports.changeTab('outline');
 			} else {
-				changeTab('minimap');
+				exports.changeTab('minimap');
 			}
 		});
-		$(DocumentManager).on('documentSaved', function (e, document) {
-			//if (!Resizer.isVisible($panelRight)) return true;
+		DocumentManager.on('documentSaved', function (e, document) {
 			if (currDoc === document) {
 				parsed = false;
 				parseDoc();
 			}
 		});
-		$(DocumentManager).on('currentDocumentChange', function (e, cd) {
-			//if (!Resizer.isVisible($panelRight)) return true;
-			changeDocument(cd);
+		MainViewManager.on('currentFileChange', function (e, file) {
+			changeDocument(file);
 		});
     });
+
+	exports.changeTab = function(tabName) {
+		if (tabName === 'outline') {
+			$minimapRoot.hide();
+			Outliner.setViewState(true);
+			Minimap.setViewState(false);
+			$outlineRoot.show();
+			activeTab = tabName;
+			prefs.set('generel/lastTab', activeTab);
+		} else if (tabName === 'minimap') {
+			$outlineRoot.hide();
+			Outliner.setViewState(false);
+			Minimap.setViewState(true);
+			$minimapRoot.show();
+			activeTab = tabName;
+			prefs.set('generel/lastTab', activeTab);
+		}
+	};
 
 });

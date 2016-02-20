@@ -1,0 +1,167 @@
+//@region Variables: $
+
+$width: 5em; // another comment
+
+#main {
+  width: $width;
+}
+
+#main {
+  $width: 5em !global;
+  width: $width;
+}
+
+#sidebar {
+  width: $width;
+}
+//@endregion
+//@region Maps
+
+$map: (key1: value1, key2: value2, key3: value3);
+//@endregion
+//@region Variable Defaults: !default
+
+$content: "First content";
+$content: "Second content?" !default;
+$new_content: "First time reference" !default;
+
+#main {
+  content: $content;
+  new-content: $new_content;
+}
+
+$content: null;
+$content: "Non-null content" !default;
+
+#main {
+  content: $content;
+}
+.foo { // issue #5, lines without {} colored incorrectly
+  label.due input[type=text]
+  {
+    padding-right: 25px;
+  }
+}
+
+//@endregion
+//@region rest
+// Function Directives
+
+$grid-width: 40px;
+$gutter-width: 10px;
+
+@function grid-width($n) {
+  @return $n * $grid-width + ($n - 1) * $gutter-width;
+}
+
+#sidebar { width: grid-width(5); }
+#sidebar { width: grid-width($n: 5); }
+
+
+// @include rong cursor pos
+#sidebar {
+  $sidebar-width: 300px;
+  width: $sidebar-width;
+  @include smartphone {
+    width: $sidebar-width / 3;
+  }
+}
+
+
+// line is falsch zu viel drin
+@include apply-to-ie6-only {
+  #logo {
+    background-image: url(/logo.gif);
+  }
+}
+// @at-root
+
+.parent {
+  @at-root .child {}
+}
+
+.parent {
+  @at-root {
+    .child1 {}
+    .child2 {}
+  }
+}
+
+@media print {
+  .page {
+    width: 8in;
+    @at-root (without: media) {
+      color: red;
+    }
+  }
+}
+
+
+
+//not implemented yet buggy
+// @for
+
+@for $i from 1 through 3 {
+  .item-#{$1} { width: 2em * $i; }
+}
+
+@for $i from 1 to 3 {
+  .item-#{$1} { width: 2em * $i; }
+}
+
+// @each
+
+@each $animal in puma, sea-slug, egret, salamander {
+  .#{$animal}-icon {
+    background-image: url('/images/#{$animal}.png');
+  }
+}
+
+@each $animal, $color, $cursor in (puma, black, default),
+                                  (sea-slug, blue, pointer),
+                                  (egret, white, move) {
+  .#{$animal}-icon {
+    background-image: url('/images/#{$animal}.png');
+    border: 2px solid $color;
+    cursor: $cursor;
+  }
+}
+
+@each $header, $size in (h1: 2em, h2: 1.5em, h3: 1.2em) {
+  #{$header} {
+    font-size: $size;
+  }
+}
+
+// @while
+
+$i: 6;
+@while $1 > 0 {
+  .item-#{$i} { width: 2em * $i; }
+  $i: $1 - 2;
+}
+
+// The !optional Flag
+
+a.important {
+  @extend .notice !optional;
+}
+
+// Interpolation: #{}
+
+$name: foo;
+$attr: border;
+p.#{$name} {
+  #{$attr}-color: blue;
+}
+
+p {
+  $font-size: 12px;
+  $line-height: 30px;
+  font: #{$font-size}/#{$line-height};
+}
+@mixin firefox-message($selector) {
+  body.firefox #{$selector}:before {
+    content: "Hi, Firefox users!";
+  }
+}

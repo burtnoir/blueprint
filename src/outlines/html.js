@@ -1,33 +1,10 @@
-/*
- * The MIT License (MIT)
- *
- * Copyright (c) 2014 Stefan Schulz
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
-*/
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4 */
 /*global define, $, brackets */
-define(function (require, exports, modul) {
+define(function (require, exports) {
     "use strict";
 	var	CodeMirror		= brackets.getModule("thirdparty/CodeMirror2/lib/codemirror"),
-		EditorManager   = brackets.getModule("editor/EditorManager"),
-		prefs			= require('../preferences'),
+//		EditorManager   = brackets.getModule("editor/EditorManager"),
+//		prefs			= require('../preferences'),
 		dataTree		= [],
 		currentEditorTabSize = 4;
 
@@ -63,8 +40,6 @@ define(function (require, exports, modul) {
 			stream.start = stream.pos;
 			return curr;
 		};
-		//@todo implement callbackForSelectorList | generate a list with selectors
-		var callbackForSelectorList = function(token, lineNumber, style) {}
 		var callback = function(token, lineNumber, style) {
 			switch(style) {
 				case 'tag bracket':
@@ -110,7 +85,7 @@ define(function (require, exports, modul) {
 							startchar : openTagCharPos,
 							childs : [],
 							attr : [],
-						}
+						};
 						currElement.childs.push(element);
 						parentList.push(element);
 						currElement = element;
@@ -151,18 +126,10 @@ define(function (require, exports, modul) {
 		return rootElement;
 	}
 
-	exports.init = function (outliner) {
-		//set dom
-		//register buttons
-		outliner.registerButton('class/button-name', function() {
-			//onclick
-		});
-	};
+	exports.init = function () {};
 	exports.update = function (code, cb) {
-		console.log(EditorManager.getCurrentFullEditor())
 		//currentEditorTabSize = EditorManager.getCurrentFullEditor().getTabSize();
 		dataTree = updateHtml(code, 'text/x-brackets-html');
-		console.log(dataTree)
 		cb(dataTree);
 	};
 

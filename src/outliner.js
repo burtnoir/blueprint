@@ -1,33 +1,11 @@
-/*
- * The MIT License (MIT)
- *
- * Copyright (c) 2014 Stefan Schulz
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
-*/
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4 */
 /*global define, $, brackets, document, setTimeout */
 define(function (require, exports) {
     "use strict";
     var EditorManager   = brackets.getModule("editor/EditorManager"),
+    	Editor			= brackets.getModule("editor/Editor"),
 		prefs = require('./preferences'),
-		MAIN = require('./main'),
+		MAIN = require('../main'),
 		$root,
 		$content,
 		$footerOutline,
@@ -36,10 +14,14 @@ define(function (require, exports) {
 		newDocFlag = true,
 		outlines = {
 			'html' : require('./outlines/html'),
-			'css' : require('./outlines/css'),
-			'js' : require('./outlines/js/js'),
+			'less' : require('./outlines/less'),
+			'scss' : require('./outlines/scss'),
+			'javascript' : require('./outlines/js/js'),
+			'json' : require('./outlines/json'),
 			'python' : require('./outlines/python'),
+			'php' : require('./outlines/php'),
 		};
+		outlines.css = outlines.less;
 
 	prefs.onChange(function(path) {
 		if (path === 'outline/fontSize') {
@@ -69,7 +51,7 @@ define(function (require, exports) {
 			}
 			//open new li and add data-dashes
 			var toggleCss = 'toggle';
-			if (node.childs.length === 0) {
+			if (node.childs && node.childs.length === 0) {
 				toggleCss += ' no-childs';
 			}
 			if (node.type) {
@@ -77,17 +59,16 @@ define(function (require, exports) {
 			}
 			html += '<li ' + dataDash + '><div class="' + toggleCss + '">&nbsp;</div>' + typeStr + '<span class="line">' + node.line + '</span><ul class="childs">';
 
-
 			//iterate over childs
-			for (name in node.childs) {
-				html += recursive(node.childs[name]);
+			for (var i=0;i<node.childs.length;i++) {
+				html += recursive(node.childs[i]);
 			}
 			//close ul li
 			html += '</ul></li>';
 			return html;
 		};
 		var re = '';
-		for (var i in dataTree.childs) {
+		for (var i=0;i<dataTree.childs.length;i++) {
 			re += recursive(dataTree.childs[i]);
 		}
 		appendStringAsNodes($root[0], re);
@@ -172,6 +153,91 @@ define(function (require, exports) {
 			callBack(e);
 		});
 	}
+	function updateCss () {
+		var rules,
+			i = document.styleSheets.length-1;
+
+		//search right css file
+		for (i;i>-1;i--) {
+			if (typeof document.styleSheets[i].href === 'string' && document.styleSheets[i].href.slice(-13) === 'blueprint.css') {
+				rules = document.styleSheets[i].rules;
+				break;
+			}
+		}
+		if (!rules) {
+			return false;
+		}
+
+		//search selectors to change and change
+		for (i=0;i<rules.length;i++) {
+			switch (rules[i].selectorText) {
+				case '#blueprint-outliner .outline-root li .line':
+					//fontSize
+					var fontSize = prefs.get('outline/fontSize');
+					rules[i].style.fontSize = fontSize + 'px';
+//					rules[i].style.lineHeight = (fontSize + 5) + 'px';
+					break;
+				case '':
+					break;
+				case '':
+					break;
+				case '':
+					break;
+				case '':
+					break;
+			}
+		}
+	}
+	function updateOutlineRootType(type) {
+		$root.attr('type', type);
+	}
+	function forceUpdate() {
+		var id = _document.getLanguage()._id,
+			source = _document.getText();
+		if (id in outlines) {
+			outlines[id].update(source, updateTree);
+			updateOutlineRootType(id);
+		} else {
+				$root.html('can\'t display "' + id + '"');
+				return false;
+		}
+		return true;
+	}
+	function fold(level) {
+		var currLevel = 0,
+			$childs = $root.children('li'),
+			i;
+
+		var rec = function($curr) {
+			var i = 0,
+				$childs = $curr.children('.childs').children('li'),
+				$toggle = $curr.children('.toggle');
+
+			if (currLevel >= level) {
+				//hide
+				if (!$toggle.hasClass('colapsed')) {
+					$toggle.addClass('colapsed');
+					$curr.children('.childs').hide();
+				}
+			} else {
+				//show
+				if ($toggle.hasClass('colapsed')) {
+					$toggle.removeClass('colapsed');
+					$curr.children('.childs').show();
+				}
+			}
+			currLevel++;
+			for (;i<$childs.length;i++) {
+				rec($($childs.get(i)) );
+			}
+			currLevel--;
+		};
+		for (i=0;i<$childs.length;i++) {
+			rec( $($childs.get(i)) );
+		}
+
+		//fold(level, currLevel + 1);
+	}
 	exports.init = function($parent) {
 		var name;
 
@@ -195,6 +261,25 @@ define(function (require, exports) {
 		});
 		$($root).on('click', '.toggle', function (e) {
 			//hide/show
+            if (e.ctrlKey) {
+                //collapse/open all with same level
+                var parents = $(this).parents(),
+                    count = 0;
+
+                for (var i = 0 ; i < parents.length; i++) {
+                    if (parents[i].classList.contains("childs")) {
+                        count++;
+                        if (parents[i].nodeName === "DIV") {
+                            break;
+                        }
+                    }
+                }
+                if (!$(e.target).hasClass('colapsed')) {
+                    count--;
+                }
+                fold(count);
+                return;
+            }
 			if ($(e.target).hasClass('colapsed')) {
 				$(e.target).removeClass('colapsed');
 			} else {
@@ -234,74 +319,6 @@ define(function (require, exports) {
 		setTimeout(function() { updateCss(); }, 500);
 		setTimeout(function() { updateCss(); }, 700);
 	};
-
-	function updateCss () {
-		var rules,
-			i = document.styleSheets.length-1;
-
-		//search right css file
-		for (i;i>-1;i--) {
-			if (typeof document.styleSheets[i].href === 'string' && document.styleSheets[i].href.slice(-13) === 'blueprint.css') {
-				rules = document.styleSheets[i].rules;
-				break;
-			}
-		}
-		if (!rules) {
-			return false;
-		}
-
-		//search selectors to change and change
-		for (i=0;i<rules.length;i++) {
-			switch (rules[i].selectorText) {
-				case '#blueprint-outliner .outline-root li .line':
-					//fontSize
-					var fontSize = prefs.get('outline/fontSize');
-					rules[i].style.fontSize = fontSize + 'px';
-//					rules[i].style.lineHeight = (fontSize + 5) + 'px';
-					break;
-				case '':
-					break;
-				case '':
-					break;
-				case '':
-					break;
-				case '':
-					break;
-			}
-		}
-		//force redraw
-		$root.hide().show();
-	}
-	function updateOutlineRootType(type) {
-		$root.attr('type', type);
-	}
-	function forceUpdate() {
-		var mode = _document.getLanguage().getMode(),
-			text = _document.getText();
-
-		switch (mode) {
-			case 'text/x-brackets-html':
-				outlines.html.update(text, updateTree);
-				updateOutlineRootType('html');
-				break;
-			case 'javascript':
-				outlines.js.update(text, updateTree);
-				updateOutlineRootType('js');
-				break;
-			case 'css':
-				outlines.css.update(text, updateTree);
-				updateOutlineRootType('css');
-				break;
-			case 'python':
-				outlines.python.update(text, updateTree);
-				updateOutlineRootType('python');
-				break;
-			default:
-				$root.html('can\'t display "' + mode + '"');
-				return false;
-		}
-		return true;
-	}
 	exports.update = function (doc) {
 		if (!doc) {
 			//clear
@@ -325,5 +342,13 @@ define(function (require, exports) {
 			$footerOutline.hide();
 		}
 	};
-
+	exports.fold = function (level) {
+		if (typeof level === 'number' && level >= 0 && level <= deepest) {
+			//fold by number
+		} else if (level) {
+			//show all
+		} else {
+			//fold all
+		}
+	};
 });

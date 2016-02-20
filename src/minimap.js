@@ -1,34 +1,11 @@
-/*
- * The MIT License (MIT)
- *
- * Copyright (c) 2014 Stefan Schulz
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
-*/
 /*jslint vars: true, plusplus: true, devel: true, nomen: true, indent: 4 */
 /*global define, $, brackets, document */
 define(function (require, exports) {
     "use strict";
     var EditorManager   = brackets.getModule("editor/EditorManager"),
-		ThemeManager  = brackets.getModule("view/ThemeManager"),
 		CodeMirror		= brackets.getModule("thirdparty/CodeMirror2/lib/codemirror"),
 		prefs			= require('./preferences'),
+        escapeElement   = document.createElement("div"),
 		_document,
 		$content,
 		$root,
@@ -46,21 +23,19 @@ define(function (require, exports) {
 		"/": '&#x2F;'
 	};
 
-	function escapeHtml(string) {
-		return String(string).replace(/[&<>"'\/]/g, function (s) {
-			return entityMap[s];
-		});
-	}
-	// CodeMirror, copyright (c) by Marijn Haverbeke and others
-	// Distributed under an MIT license: http://codemirror.net/LICENSE
-	CodeMirror.runMode = function(string, modespec) {
+
+    function htmlEscape(str) {
+        escapeElement.innerText = escapeElement.textContent = str;
+        return escapeElement.innerHTML;
+    }
+
+	var myRunMode = function(string, modespec) {
 		var mode = CodeMirror.getMode(CodeMirror.defaults, modespec),
 			options,
 			html = '<span class="line-number" value="1"></span>',
 			lineNumber = 1,
 			tabSize = (options && options.tabSize) || CodeMirror.defaults.tabSize,
 			col = 0;
-
 
 		var callback = function(text, style) {
 			if (text == "\n") {
@@ -90,11 +65,7 @@ define(function (require, exports) {
 				}
 			}
 			if (style) {
-				if (style === 'string') {
-					content = escapeHtml(content);
-				}
-				var className = "cm-" + style.replace(/ +/g, " cm-");
-				html += '<span class="' + className + '">' + content + '</span>';
+                html += "<span class=\"cm-" + htmlEscape(style) + "\">" + htmlEscape(text) + "</span>";
 			} else {
 				html += content;
 			}
@@ -278,16 +249,17 @@ define(function (require, exports) {
 		$('.wrap' ,$minimapRoot).remove();
 		_document = doc;
 
-		var html = CodeMirror.runMode(text, mode);
+		var html = myRunMode(text, mode);
 		$minimapRoot.append('<div class="wrap CodeMirror-scroll"></div>');
 		appendStringAsNodes($('.wrap' ,$minimapRoot)[0], html);
 
 		var currentEditor = doc._masterEditor;
-		$(currentEditor).on('scroll', function() {
+		currentEditor.on('scroll', function() {
 			if (dragState === false) {
 				updateScrollOverlay();
 			}
 		});
+		updateScrollOverlay();
 	};
 	exports.onOpenIn = function(viewName, win) {
 		if (viewName === 'window') {
